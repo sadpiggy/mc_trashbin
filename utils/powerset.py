@@ -1,14 +1,16 @@
 from typing import List, Set
 
 class PowerSet:
-    def __init__(self, universe_):
+    def __init__(self, universe_:list):
+        # element,index
         self.universe = {}
+        # index,set
         self.subsets = {}
         for i, element in enumerate(universe_):
             self.universe[element] = i
         tmp = set()
         self.generate_subsets(tmp, universe_, 0, 0)
-
+        
     def get_universe(self):
         ret = []
         for element, index in self.universe.items():
@@ -24,12 +26,12 @@ class PowerSet:
     def get_subsets(self):
         ret = []
         for index, subset in self.subsets.items():
-            ret.append((subset))
+            ret.append(subset)
         return ret
 
     def generate_subsets(self, s, universe_, i, v):
         if i == len(universe_):
-            self.subsets[v] = set(s)
+            self.subsets[v] = s.copy()
             return 
         self.generate_subsets(s, universe_, i + 1, v)
         s.add(universe_[i])

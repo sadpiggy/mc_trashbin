@@ -1,10 +1,12 @@
 from typing import Set
 import ctypes
-a = set([1,2,3])
-ret = set()
-ret.add(id(a))
-for _id in ret:
-    print(_id)
-    obj = ctypes.pythonapi.PyObject_FromLong(_id)
-    # retrieved_a = ctypes.cast(obj, ctypes.py_object).value
-    
+
+class pig:
+    def __init__(self,ear_):
+        self.ear = ear_
+index = pig(0)
+a = {}
+a[index] = 1
+print(a[index])
+index.ear = 8
+print(a[index])

@@ -16,11 +16,12 @@ class Symbol:
     pass
 
 class BA:
-
-    delta: Dict[State, Dict[Symbol, Set[State]]] = {}
-    states: List[State] = []
-    alphabet: List[Symbol] = []
-    maded_nonblocking: bool = False
+    
+    def __init__(self):
+        self.delta: Dict[State, Dict[Symbol, Set[State]]] = {}
+        self.states: List[State] = []
+        self.alphabet: List[Symbol] = []
+        self.maded_nonblocking: bool = False
     
     def make_nonblocking(self):
         if self.maded_nonblocking:
@@ -49,12 +50,15 @@ class GNBA(BA):
         PropLTLs_power_set: PowerSet,
         True_: LTLNode.LTL_Base_Node
     ):
-        closure = phi.get_closure(phi, None)
+        super().__init__()
+        closure = phi.get_closure(phi, None).copy()
         for propLTL in PropLTLs_power_set.get_universe():
             if propLTL not in closure:
                 closure.add(propLTL)
                 closure.add(LTLNode.Negation(propLTL))
         has_True = True in closure
+        if True in closure:
+            print("no problem")
 
         elementary_sets = []
         closure_power_set = PowerSet(list(closure))
@@ -100,7 +104,7 @@ class GNBA(BA):
         for B in elementary_sets:
             is_initial = phi in B
             state = State(is_initial)
-            set2state[B] = state
+            set2state[frozenset(B)] = state
             self.states.append(state)
             self.delta[state] = {}
 
@@ -110,7 +114,7 @@ class GNBA(BA):
                 F_psi = set()
                 for B in elementary_sets:
                     if psi not in B or phi1 in B:
-                        F_psi.add(set2state[(B)])
+                        F_psi.add(set2state[frozenset(B)])
                 self.F.append(F_psi)
 
         set2symbol = {}
@@ -118,9 +122,9 @@ class GNBA(BA):
         # print("set2symbol={}".format(set2symbol))
         for s in PropLTLs_power_set.get_subsets():
             symbol = Symbol()
-            set2symbol[(s)] = symbol
+            set2symbol[frozenset(s)] = symbol
             self.alphabet.append(symbol)
-            LTL2Symbol[(s)] = symbol
+            LTL2Symbol[frozenset(s)] = symbol
 
         for B in elementary_sets:
             intersection = [psi for psi in PropLTLs_power_set.get_universe() if psi in B]
@@ -136,10 +140,10 @@ class GNBA(BA):
                         phi1 = it.get_children()[-1]
                         flag &= (it in B) == (phi1 in B_prime or (phi0 in B and it in B_prime))
                 if flag:
-                    delta_B = self.delta[set2state[(B)]]
+                    delta_B = self.delta[set2state[frozenset(B)]]
                     # print(type(A))
                     symbol = set2symbol[frozenset(A)]
-                    state_B_prime = set2state[(B_prime)]
+                    state_B_prime = set2state[frozenset(B_prime)]
                     if symbol not in delta_B:
                         delta_B[symbol] = set()
                     delta_B[symbol].add(state_B_prime)
@@ -155,12 +159,16 @@ class GNBA(BA):
 
 class NBA(BA):
     def __init__(self, gnba: GNBA, state2state_index: Dict[State, Tuple[State, int]]):
+        super().__init__()
         self.F: Set[State] = set()
         
         self.alphabet = gnba.alphabet
         k = len(gnba.F)
         states_list = []
         index = {}
+        # print("----------self.states_len={}".format(len(self.states)))
+        # count = 0
+        # print("in nba{},k=={}".format(len(gnba.states),k))
         for i in range(len(gnba.states)):
             state_ = gnba.states[i]
             index[state_] = i
@@ -172,7 +180,9 @@ class NBA(BA):
                 for symbol in self.alphabet:
                     self.delta[state][symbol] = set()
                 self.states.append(state)
+                # count += 1
                 states_list[-1].append(state)
+        # print("self.states_len={},count=={}".format(len(self.states),count))
         
         if k:
             for i in range(len(gnba.states)):
@@ -202,8 +212,18 @@ def to_string_nba(nba: NBA, state2set: Dict[State, Set[LTLNode.LTL_Base_Node]], 
     ret = "NBA starts from here.\n"
     ret += "(Non-blocking)\n" if nba.maded_nonblocking else "(Maybe Blocking)\n"
     ret += "States:\n"
+    # print(nba.states.__len__())
+    # return
+    
     for state in nba.states:
         ret += "\t{"
+        # print("state={}".format(state))
+        # if not state2state.keys().__contains__(state):
+        #     print("not contain")
+        #     print(state)
+        #     for i in state2state.keys():
+        #         print(i)
+                
         state_, index = state2state[state]
         for phi in state2set[state_]:
             ret += phi.to_string() + ", "

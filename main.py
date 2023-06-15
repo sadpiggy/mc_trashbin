@@ -66,18 +66,14 @@ def main():
                 root_ltl = root.get_children()[0]
             else:
                 root_ltl = LTLNode.Negation(root)
+                
+            # print(root_ltl.to_string())
             
-            # print(root_ltl)
-            # convert to gnba
-            # print("len==" + str(len(PropLTLs)))    
             PropLTLs_powerset = powerset.PowerSet(PropLTLs)
-            # print("len==" + str(len(PropLTLs_powerset.get_subsets()))) 
-            
-            # convert LTL formula to GNBA
             LTL2Symbol: Dict[Set[LTLNode.LTL_Base_Node], BA.Symbol] = {}
             set2gnba_state: Dict[Set[LTLNode.LTL_Base_Node], BA.State] = {}
             gnba: BA.GNBA = BA.GNBA(root_ltl, LTL2Symbol, set2gnba_state, PropLTLs_powerset, True)
-
+            # print("gnbs_states_len=={}".format(gnba.states.__len__()))
             Symbol2LTL: Dict[BA.Symbol, Set[LTLNode.LTL_Base_Node]] = {}
             for set_symbols, symbol in LTL2Symbol.items():
                 Symbol2LTL[symbol] = set_symbols
@@ -89,11 +85,17 @@ def main():
             
 
             trap: BA.State = gnba.make_nonblocking()
+            # print("gnbs_states_len222=={}".format(gnba.states.__len__()))
             gnba_state2set[trap] = {}
+            # count = 0
+            # for i,_ in gnba_state2set.items():
+            #     count += 1
+            # print("count=={}".format(count))
 
             # convert GNBA to NBA
             nba_state2gnba_state: Dict[BA.State, Tuple[BA.State, int]] = {}
             nba: BA.NBA = BA.NBA(gnba, nba_state2gnba_state)
+            # print("nba_states_len=={}".format(nba.states.__len__()))
             print(BA.to_string_nba(nba, gnba_state2set, nba_state2gnba_state, Symbol2LTL), file=open('output/output.txt','a'))
             
 
