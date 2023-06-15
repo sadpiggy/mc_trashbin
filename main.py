@@ -12,11 +12,13 @@ from BA import BA
 
 def main():
     # TS
+    only_concert_ltl = 0
     ts = TS.TS()
     ts.generate_ts("datas/TS1.txt")
+    # aps
     Name2Prop: Dict[str, 'TS.Proposition'] = ts.get_Name2Prop()
     Prop2LTL: Dict['TS.Proposition', 'LTLNode.LTL_Base_Node'] = {}
-    PropLTLs: list['LTLNode.LTL_Base_Node'] = []
+    PropLTLs: list['LTLNode.LTL_Base_Node'] = []# ltls
     for name, prop in Name2Prop.items():
         ltl = LTLNode.Variable(prop)
         PropLTLs.append(ltl)
@@ -24,13 +26,13 @@ def main():
     True_: 'LTLNode.LTL_Base_Node' = LTLNode.LTL_Base_Node()
     
     s0_lines_num = 0
-    si_lines_num = 1
+    si_lines_num = 0
     ltl_si = 0
     
     with open("datas/LTL1.txt", 'r') as file:
         line_num = 0
         # state_index = 0
-        s_lable_index = 0
+        # s_lable_index = 0
         for line in file:
             line_num += 1
             if line_num == 1:
@@ -55,16 +57,21 @@ def main():
                 # visitor = LTLvisitor.L
                 visitor = LTLvisitor.LTLformularVisitorImpl(Name2Prop,Prop2LTL,True_)
                 root = visitor.visit(tree)
-                
+            if only_concert_ltl == 1:
+                print(root.to_string())
+                continue
             root_ltl: LTLNode.LTL_Base_Node = None
             if isinstance(root, LTLNode.Negation):
+                #负负得正
                 root_ltl = root.get_children()[0]
             else:
                 root_ltl = LTLNode.Negation(root)
             
             # print(root_ltl)
-            # convert to gnba    
+            # convert to gnba
+            # print("len==" + str(len(PropLTLs)))    
             PropLTLs_powerset = powerset.PowerSet(PropLTLs)
+            # print("len==" + str(len(PropLTLs_powerset.get_subsets()))) 
             
             # convert LTL formula to GNBA
             LTL2Symbol: Dict[Set[LTLNode.LTL_Base_Node], BA.Symbol] = {}

@@ -56,7 +56,7 @@ class GNBA(BA):
                 closure.add(LTLNode.Negation(propLTL))
         has_True = True in closure
 
-        elementary_sets = set()
+        elementary_sets = []
         closure_power_set = PowerSet(list(closure))
         for B in closure_power_set.get_subsets():
             flag = not has_True or True in B
@@ -91,7 +91,7 @@ class GNBA(BA):
                                 break
                         flag &= found
             if flag:
-                elementary_sets.add((B))
+                elementary_sets.append((B))
 
         self.states = []
         self.delta = {}
@@ -115,7 +115,7 @@ class GNBA(BA):
 
         set2symbol = {}
         self.alphabet = []
-        print("set2symbol={}".format(set2symbol))
+        # print("set2symbol={}".format(set2symbol))
         for s in PropLTLs_power_set.get_subsets():
             symbol = Symbol()
             set2symbol[(s)] = symbol

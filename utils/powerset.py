@@ -22,15 +22,15 @@ class PowerSet:
         return self.subsets[v]
 
     def get_subsets(self):
-        ret = set()
+        ret = []
         for index, subset in self.subsets.items():
-            ret.add(frozenset(subset))
+            ret.append((subset))
         return ret
 
     def generate_subsets(self, s, universe_, i, v):
         if i == len(universe_):
             self.subsets[v] = set(s)
-            return
+            return 
         self.generate_subsets(s, universe_, i + 1, v)
         s.add(universe_[i])
         self.generate_subsets(s, universe_, i + 1, v | (1 << i))
