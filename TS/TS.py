@@ -1,7 +1,3 @@
-#
-# Created by crazy_cloud on 2022/4/25.
-# @formatter:off
-#
 from BA import BA
 from LTL import LTLNode
 from utils import powerset

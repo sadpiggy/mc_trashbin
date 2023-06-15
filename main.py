@@ -2,19 +2,24 @@ from Parser import LTLvisitor
 from antlr4 import CommonTokenStream,InputStream
 from Parser.LTLformularLexer import LTLformularLexer
 from Parser.LTLformularParser import LTLformularParser
-from utils import instance
 from utils import powerset
 from typing import Dict,Set
 from TS import TS
 from LTL import LTLNode
 from typing import List,Set,Tuple
 from BA import BA
+import sys
 
 def main():
     # TS
     only_concert_ltl = 0
     ts = TS.TS()
-    ts.generate_ts("datas/TS1.txt")
+    ts_path = "datas/TS1.txt"
+    ltl_path = "datas/LTL2.txt"
+    if (len(sys.argv) > 2):
+        ts_path = sys.argv[1]
+        ltl_path = sys.argv[2]
+    ts.generate_ts(ts_path)
     # aps
     Name2Prop: Dict[str, 'TS.Proposition'] = ts.get_Name2Prop()
     Prop2LTL: Dict['TS.Proposition', 'LTLNode.LTL_Base_Node'] = {}
@@ -29,7 +34,7 @@ def main():
     si_lines_num = 0
     ltl_si = 0
     
-    with open("datas/LTL1.txt", 'r') as file:
+    with open(ltl_path, 'r') as file:
         line_num = 0
         # state_index = 0
         # s_lable_index = 0
@@ -67,7 +72,6 @@ def main():
             else:
                 root_ltl = LTLNode.Negation(root)
                 
-            # print(root_ltl.to_string())
             
             PropLTLs_powerset = powerset.PowerSet(PropLTLs)
             LTL2Symbol: Dict[Set[LTLNode.LTL_Base_Node], BA.Symbol] = {}
@@ -96,7 +100,7 @@ def main():
             nba_state2gnba_state: Dict[BA.State, Tuple[BA.State, int]] = {}
             nba: BA.NBA = BA.NBA(gnba, nba_state2gnba_state)
             # print("nba_states_len=={}".format(nba.states.__len__()))
-            print(BA.to_string_nba(nba, gnba_state2set, nba_state2gnba_state, Symbol2LTL), file=open('output/output.txt','a'))
+            # print(BA.to_string_nba(nba, gnba_state2set, nba_state2gnba_state, Symbol2LTL), file=open('output/output.txt','a'))
             
 
             # construction production of TransitionSystem and NBA
@@ -120,7 +124,7 @@ def main():
             
             production: TS.TS = TS.product(ts, nba, LTL2Symbol, Prop2LTL, PropLTLs_powerset, F_props, s2s_nba_state)
             # print(production)
-            print(TS.to_string(production,  s2s_nba_state, nba_state2gnba_state, gnba_state2set), file=open('output/output.txt','a'))
+            # print(TS.to_string(production,  s2s_nba_state, nba_state2gnba_state, gnba_state2set), file=open('output/output.txt','a'))
             
             result: bool
             if line_num <= 1 + s0_lines_num:
