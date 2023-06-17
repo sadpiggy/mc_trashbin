@@ -106,61 +106,61 @@ class GNBA(BA):
                 
             if flag:
                 elementary_sets.append(subset)
-
+#Initialize states
         for subset in elementary_sets:
             is_initial = formular in subset
             state = State(is_initial)
             set2state[frozenset(subset)] = state
             self.states.append(state)
             self.delta[state] = {}
-
+#Construct accepting conditions Final
         for target in closure_set:
             if isinstance(target, LTLNode.Until):
                 phi1 = target.get_children()[-1]
-                F_psi = set()
+                acceptintStates = set()
                 for subset in elementary_sets:
                     if target not in subset or phi1 in subset:
-                        F_psi.add(set2state[frozenset(subset)])
-                self.F.append(F_psi)
+                        acceptintStates.add(set2state[frozenset(subset)])
+                self.F.append(acceptintStates)
 
-        set2symbol = {}
-        self.alphabet = []
+        # self.alphabet = []
         # print("set2symbol={}".format(set2symbol))
+# construct alphabet
+        set2symbol = {}
         for s in PropLTLs_power_set.get_subsets():
             symbol = Symbol()
             set2symbol[frozenset(s)] = symbol
             self.alphabet.append(symbol)
             LTL2Symbol[frozenset(s)] = symbol
-
+# construct transition function
         for subset in elementary_sets:
             intersection = [psi for psi in PropLTLs_power_set.get_universe() if psi in subset]
             A = PropLTLs_power_set.get_subset(intersection)
-            for B_prime in elementary_sets:
+            for subset_prime in elementary_sets:
                 flag = True
                 for it in closure_set:
+                    if not flag:
+                        break
                     if isinstance(it, LTLNode.Next):
                         target = it.get_children()[0]
-                        flag &= (it in subset) == (target in B_prime)
+                        flag &= (it in subset) == (target in subset_prime)
                     if isinstance(it, LTLNode.Until):
                         phi0 = it.get_children()[0]
                         phi1 = it.get_children()[-1]
-                        flag &= (it in subset) == (phi1 in B_prime or (phi0 in subset and it in B_prime))
+                        flag &= (it in subset) == (phi1 in subset_prime or (phi0 in subset and it in subset_prime))
                 if flag:
-                    delta_B = self.delta[set2state[frozenset(subset)]]
+                    delta_subset = self.delta[set2state[frozenset(subset)]]
                     # print(type(A))
                     symbol = set2symbol[frozenset(A)]
-                    state_B_prime = set2state[frozenset(B_prime)]
-                    if symbol not in delta_B:
-                        delta_B[symbol] = set()
-                    delta_B[symbol].add(state_B_prime)
+                    state_subset_prime = set2state[frozenset(subset_prime)]
+                    if symbol not in delta_subset:
+                        delta_subset[symbol] = {state_subset_prime}
+                    else:
+                        delta_subset[symbol].add(state_subset_prime)
 
 
 
 
-
-
-
-    F: List[Set[State]]
 
 
 class NBA(BA):
@@ -169,46 +169,43 @@ class NBA(BA):
         self.F: Set[State] = set()
         
         self.alphabet = gnba.alphabet
-        k = len(gnba.F)
+        num_sets = len(gnba.F)
         states_list = []
         index = {}
-        # print("----------self.states_len={}".format(len(self.states)))
-        # count = 0
-        # print("in nba{},k=={}".format(len(gnba.states),k))
+
         for i in range(len(gnba.states)):
             state_ = gnba.states[i]
             index[state_] = i
             states_list.append([])
-            for j in range(k):
-                state = State(not j and state_.get_is_initial())
-                state2state_index[state] = (state_, j)
-                self.delta[state] = {}
+            for j in range(num_sets):
+                new_state = State(not j and state_.get_is_initial())
+                state2state_index[new_state] = (state_, j)
+                self.delta[new_state] = {}
                 for symbol in self.alphabet:
-                    self.delta[state][symbol] = set()
-                self.states.append(state)
-                # count += 1
-                states_list[-1].append(state)
+                    self.delta[new_state][symbol] = set()
+                self.states.append(new_state)
+                states_list[-1].append(new_state)
         # print("self.states_len={},count=={}".format(len(self.states),count))
         
-        if k:
+        if num_sets:
             for i in range(len(gnba.states)):
                 if gnba.states[i] in gnba.F[0]:
                     self.F.add(states_list[i][0])
         
         for i in range(len(gnba.states)):
-            state = gnba.states[i]
-            for symbol, next_states in gnba.delta[state].items():
+            new_state = gnba.states[i]
+            for symbol, next_states in gnba.delta[new_state].items():
                 next_states_list = []
-                for j in range(k):
-                    next_states_j_set = set()
+                for j in range(num_sets):
+                    next_states_set = set()
                     for next_state in next_states:
-                        next_states_j_set.add(states_list[index[next_state]][j])
-                    next_states_list.append(next_states_j_set)
-                for j in range(k):
-                    if state not in gnba.F[j]:
+                        next_states_set.add(states_list[index[next_state]][j])
+                    next_states_list.append(next_states_set)
+                for j in range(num_sets):
+                    if new_state not in gnba.F[j]:
                         self.delta[states_list[i][j]][symbol].update(next_states_list[j])
                     else:
-                        self.delta[states_list[i][j]][symbol].update(next_states_list[(j + 1) % k])
+                        self.delta[states_list[i][j]][symbol].update(next_states_list[(j + 1) % num_sets])
 
 
 
