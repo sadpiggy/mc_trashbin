@@ -21,100 +21,106 @@ class BA:
         self.delta: Dict[State, Dict[Symbol, Set[State]]] = {}
         self.states: List[State] = []
         self.alphabet: List[Symbol] = []
-        self.maded_nonblocking: bool = False
-    
+        self.NF_flag: bool = False
+        # self.NFlag = False
+
+
+# By introducing a trap state, the Büchi automaton can be transformed into a non-blocking form.
+# This additional state takes care of undefined transitions in the original automaton, ensuring complete determinism of the automaton.
     def make_nonblocking(self):
-        if self.maded_nonblocking:
+        if self.NF_flag:
             return None
         trap = State()
         self.delta[trap] = {symbol: set([trap]) for symbol in self.alphabet}
+        # self.delta[trap] = {}
         self.states.append(trap)
         for state in self.states:
             for symbol in self.alphabet:
                 if symbol not in self.delta[state]:
                     self.delta[state][symbol] = set([trap])
-        self.maded_nonblocking = True
+        self.NF_flag = True
         return trap
 
 
 
 
 
-
+# Construct a GNBA 
 class GNBA(BA):
     def __init__(
         self,
-        phi: LTLNode.LTL_Base_Node,
+        formular: LTLNode.LTL_Base_Node,
         LTL2Symbol: Dict[Set[LTLNode.LTL_Base_Node], Symbol],
         set2state: Dict[Set[LTLNode.LTL_Base_Node], State],
         PropLTLs_power_set: PowerSet,
         True_: LTLNode.LTL_Base_Node
     ):
         super().__init__()
-        closure = phi.get_closure(phi, None).copy()
-        for propLTL in PropLTLs_power_set.get_universe():
-            if propLTL not in closure:
-                closure.add(propLTL)
-                closure.add(LTLNode.Negation(propLTL))
-        has_True = True in closure
-        if True in closure:
-            print("no problem")
+        self.F = []
 
+        closure_set = formular.get_closure(formular, None).copy()
+        for propLTL in PropLTLs_power_set.get_universe():
+            if propLTL not in closure_set:
+                closure_set.add(propLTL)
+                closure_set.add(LTLNode.Negation(propLTL))
+        has_True = True in closure_set
+        # if True in closure_set:
+        #     print("no problem")
+# Compute elementary sets of closure(formula)
         elementary_sets = []
-        closure_power_set = PowerSet(list(closure))
-        for B in closure_power_set.get_subsets():
-            flag = not has_True or True in B
-            for it in closure:
+        closure_power_set = PowerSet(list(closure_set))
+        for subset in closure_power_set.get_subsets():
+            flag = not has_True or True in subset
+            for it in closure_set:
+                if not flag:
+                    break
                 if isinstance(it, LTLNode.And):
                     phi0 = it.get_children()[0]
                     phi1 = it.get_children()[-1]
-                    flag &= (it in B) == (phi0 in B and phi1 in B)
-                if it in B:
+                    flag &= (it in subset) == (phi0 in subset and phi1 in subset)
+                if it in subset:
                     if isinstance(it, LTLNode.Negation):
-                        psi = it.get_children()[0]
-                        flag &= psi not in B
+                        target = it.get_children()[0]
+                        flag &= target not in subset
                     else:
-                        for phi_ in B:
-                            flag &= not (isinstance(phi_, LTLNode.Negation) and phi_.get_children()[0] == it)
+                        for phi_ in subset:
+                            flag &= (not(isinstance(phi_, LTLNode.Negation)) or phi_.get_children()[0] != it)
                 if isinstance(it, LTLNode.Until):
                     phi0 = it.get_children()[0]
                     phi1 = it.get_children()[-1]
-                    if phi1 in B:
-                        flag &= it in B
-                    if it in B and phi1 not in B:
-                        flag &= phi0 in B
-                if it not in B:
+                    if phi1 in subset:
+                        flag &= it in subset
+                    if it in subset and phi1 not in subset:
+                        flag &= phi0 in subset
+                if it not in subset:
                     if isinstance(it, LTLNode.Negation):
-                        psi = it.get_children()[0]
-                        flag &= psi in B
+                        target = it.get_children()[0]
+                        flag &= target in subset
                     else:
                         found = False
-                        for phi_ in B:
+                        for phi_ in subset:
                             if isinstance(phi_, LTLNode.Negation) and phi_.get_children()[0] == it:
                                 found = True
                                 break
                         flag &= found
+                
             if flag:
-                elementary_sets.append((B))
+                elementary_sets.append(subset)
 
-        self.states = []
-        self.delta = {}
-        self.F = []
-
-        for B in elementary_sets:
-            is_initial = phi in B
+        for subset in elementary_sets:
+            is_initial = formular in subset
             state = State(is_initial)
-            set2state[frozenset(B)] = state
+            set2state[frozenset(subset)] = state
             self.states.append(state)
             self.delta[state] = {}
 
-        for psi in closure:
-            if isinstance(psi, LTLNode.Until):
-                phi1 = psi.get_children()[-1]
+        for target in closure_set:
+            if isinstance(target, LTLNode.Until):
+                phi1 = target.get_children()[-1]
                 F_psi = set()
-                for B in elementary_sets:
-                    if psi not in B or phi1 in B:
-                        F_psi.add(set2state[frozenset(B)])
+                for subset in elementary_sets:
+                    if target not in subset or phi1 in subset:
+                        F_psi.add(set2state[frozenset(subset)])
                 self.F.append(F_psi)
 
         set2symbol = {}
@@ -126,21 +132,21 @@ class GNBA(BA):
             self.alphabet.append(symbol)
             LTL2Symbol[frozenset(s)] = symbol
 
-        for B in elementary_sets:
-            intersection = [psi for psi in PropLTLs_power_set.get_universe() if psi in B]
+        for subset in elementary_sets:
+            intersection = [psi for psi in PropLTLs_power_set.get_universe() if psi in subset]
             A = PropLTLs_power_set.get_subset(intersection)
             for B_prime in elementary_sets:
                 flag = True
-                for it in closure:
+                for it in closure_set:
                     if isinstance(it, LTLNode.Next):
-                        psi = it.get_children()[0]
-                        flag &= (it in B) == (psi in B_prime)
+                        target = it.get_children()[0]
+                        flag &= (it in subset) == (target in B_prime)
                     if isinstance(it, LTLNode.Until):
                         phi0 = it.get_children()[0]
                         phi1 = it.get_children()[-1]
-                        flag &= (it in B) == (phi1 in B_prime or (phi0 in B and it in B_prime))
+                        flag &= (it in subset) == (phi1 in B_prime or (phi0 in subset and it in B_prime))
                 if flag:
-                    delta_B = self.delta[set2state[frozenset(B)]]
+                    delta_B = self.delta[set2state[frozenset(subset)]]
                     # print(type(A))
                     symbol = set2symbol[frozenset(A)]
                     state_B_prime = set2state[frozenset(B_prime)]
@@ -210,7 +216,7 @@ class NBA(BA):
 
 def to_string_nba(nba: NBA, state2set: Dict[State, Set[LTLNode.LTL_Base_Node]], state2state: Dict[State, Tuple[State, int]], Symbol2LTL: Dict[Symbol, Set[LTLNode.LTL_Base_Node]]) -> str:
     ret = "NBA starts from here.\n"
-    ret += "(Non-blocking)\n" if nba.maded_nonblocking else "(Maybe Blocking)\n"
+    ret += "(Non-blocking)\n" if nba.NF_flag else "(Maybe Blocking)\n"
     ret += "States:\n"
     # print(nba.states.__len__())
     # return
@@ -271,7 +277,7 @@ def to_string_gnba(
     Symbol2LTL: Dict[Symbol, Set[LTLNode.LTL_Base_Node]]
 ) -> str:
     ret = "GNBA starts from here.\n"
-    ret += "(Non-blocking)\n" if gnba.maded_nonblocking else "(Maybe Blocking)\n"
+    ret += "(Non-blocking)\n" if gnba.NF_flag else "(Maybe Blocking)\n"
     ret += "States:\n"
     for state in gnba.states:
         ret += "\t{"

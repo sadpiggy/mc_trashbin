@@ -296,11 +296,11 @@ def get_entries(src_s: State,
 #     return ret
 
 
-def product(ts, nba, LTL2Symbol, Prop2LTL, power_set, F_Props, s2s_state):
-    ret = TS()
+def product(ts, nba, LTL2Symbol, Prop2LTL, power_set, final_Props, stateMapping):
+    result = TS()
 
     # copy Act
-    ret.Acts = ts.Acts
+    result.Acts = ts.Acts
 
     # initialize states
     ts_index = {}
@@ -313,15 +313,15 @@ def product(ts, nba, LTL2Symbol, Prop2LTL, power_set, F_Props, s2s_state):
     for s in ts.States:
         states_list.append([])
         for state in nba.states:
-            state_ = State()
-            state_.set_is_initial()
-            s2s_state[state_] = (s, state)
-            ret.trans[state_] = set()
-            ret.States.append(state_)
-            ret.Lables[state_] = set()
-            states_list[-1].append(state_)
+            new_state = State()
+            new_state.is_initial = False
+            stateMapping[new_state] = (s, state)
+            result.trans[new_state] = set()
+            result.States.append(new_state)
+            result.Lables[new_state] = set()
+            states_list[-1].append(new_state)
 
-    # initialize I
+    # Initialize initial states
     for i, s in enumerate(ts.States):
         if s.get_is_initial():
             for q_prime in nba.states:
@@ -337,20 +337,20 @@ def product(ts, nba, LTL2Symbol, Prop2LTL, power_set, F_Props, s2s_state):
     # initialize AP
     for q in nba.states:
         prop = Proposition()
-        ret.APs.append(prop)
+        result.APs.append(prop)
         if q in nba.F:
-            F_Props.add(prop)
+            final_Props.add(prop)
 
-    # initialize L
-    for s_list in states_list:
+    # initialize Lables
+    for state_list in states_list:
         for j, q in enumerate(nba.states):
-            ret.Lables[s_list[j]].add(ret.APs[j])
+            result.Lables[state_list[j]].add(result.APs[j])
 
-    # initialize trans
+    # initialize transitions
     for s in ts.States:
-        s_list = states_list[ts_index[s]]
+        state_list = states_list[ts_index[s]]
         for q in nba.states:
-            sq_state = s_list[nba_index[q]]
+            sq_state = state_list[nba_index[q]]
             for t, alpha in ts.trans[s]:
                 t_list = states_list[ts_index[t]]
                 tmp = []
@@ -359,9 +359,9 @@ def product(ts, nba, LTL2Symbol, Prop2LTL, power_set, F_Props, s2s_state):
                 LTL_set = power_set.get_subset(tmp)
                 # if LTL2Symbol.get(frozenset(LTL_set)) is not None and nba.delta.get(q_prime) is not None and nba.delta[q_prime].get(LTL2Symbol[frozenset(LTL_set)]) is not None:
                 for p in nba.delta[q][LTL2Symbol[frozenset(LTL_set)]]:
-                    ret.trans[sq_state].add((t_list[nba_index[p]], alpha))
+                    result.trans[sq_state].add((t_list[nba_index[p]], alpha))
 
-    return ret
+    return result
 
 
 
